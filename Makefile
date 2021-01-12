@@ -27,9 +27,7 @@ S   += $(P) $(C) $(H) $(R) $(E) $(X) $(L)
 # \ <section:all>
 .PHONY: all
 all: $(PY) $(MODULE).py	
-	# \ <section:body>
 	$^
-	# / <section:body>
 .PHONY: repl
 repl: $(PY) $(MODULE).py
 	clear
@@ -119,7 +117,7 @@ MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S)
 MERGE += static templates
 .PHONY: main
 main:
-	git push -v
+	# git push -v
 	git checkout $@
 	git pull -v
 	git checkout shadow -- $(MERGE)
