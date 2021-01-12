@@ -80,27 +80,41 @@ class Object:
 
     ##################################################### dump
 
+    def test(self): return self.dump(test=True)
+
     def __repr__(self): return self.dump()
 
-    def dump(self, depth=0, prefix=''):
-        ret = self.pad(depth) + self.head(prefix)
+    def dump(self, depth=0, prefix='', test=False):
+        ret = self.pad(depth) + self.head(prefix, test)
+        # slot{}
+        for i in sorted(self.slot.keys()):
+            ret += self.slot[i].dump(depth + 1, f'{i} = ', test)
+        for j, k in enumerate(self.nest):
+            ret += k.dump(depth + 1, f'{j} : ', test)
         return ret
 
-    def head(self, prefix=''):
-        return f'{prefix}<{self.type}:{self.value}> @{id(self):x}'
+    def head(self, prefix='', test=False):
+        suffix = '' if test else f' @{id(self):x}'
+        return f'{prefix}<{self.type}:{self.value}>{suffix}'
 
     def pad(self, depth):
         return '\n' + '\t' * depth
 
     ############################################### operators
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):             ## A[key] get by symbol
         assert isinstance(key, str)
         return self.slot[key]
+
+    def __floordiv__(self, that):           ## A // B push
+        assert isinstance(that, Object)
+        self.nest.append(that)
+        return self
 
     ############################################## evaluation
 
     def eval(self, env): raise NotImplementedError(self, eval, self.__class__)
+
 
 ###################################################### primitive scalar types
 
@@ -117,10 +131,14 @@ class Num(Primitive):
     def __init__(self, V):
         super().__init__(float(V))
 
+
 ############################################################# data containers
 
 class Container(Object):
-    pass
+    def __init__(self, V=''):
+        super().__init__(V)
+
+    def eval(self, env): return self
 
 class Map(Container):
     pass
@@ -139,12 +157,38 @@ class Stack(Container):
 class Queue(Container):
     pass
 
+
+################################################# active (executable) objects
+
+class Active(Object):
+    pass
+
+class Op(Active):       # operator
+    def eval(self, env):
+        if len(self.nest) == 1:
+            if self.value == '`':
+                return self.nest[0]
+            raise NotImplementedError(self, 1)
+        elif len(self.nest) == 2:
+            raise NotImplementedError(self, 2)
+        else:
+            raise NotImplementedError(self, len(self.nest))
+
+class Cmd(Active):      # VM command (Python function)
+    pass
+
+class Fn(Active):       # function
+    pass
+
 ####################################################################### lexer
 
 
 import ply.lex as lex
 
-tokens = ['sym', 'num', 'str']
+tokens = ['sym', 'num', 'str',
+          'lq', 'rq',
+          'comma', 'tild', 'tick',
+          ]
 
 t_ignore = ' \t\r'
 
@@ -158,7 +202,16 @@ def t_nl(t):
 
 def t_str(t):
     r"'.*'|\".*\""
-    t.value = Str(t.value[1:-1]) ; return t
+    t.value = Str(t.value[1:-1])
+    return t
+
+
+t_lq = r'\['
+t_rq = r'\]'
+
+t_comma = r','
+t_tild = r'~'
+t_tick = r'`'
 
 def t_num(t):
     r'[+\-]?[0-9]+(\.[0-9]+)?([eE][+\-]?[0-9]+)?'
@@ -166,7 +219,7 @@ def t_num(t):
     return t
 
 def t_sym(t):
-    r'[^ \t\r\n]+'
+    r'[^ \t\r\n\(\)\[\]\{\}\,\~\`]+'
     t.value = Sym(t.value)
     return t
 
@@ -175,7 +228,12 @@ def t_ANY_error(t): raise SyntaxError(t)
 
 lexer = lex.lex()
 
+
 ####################################################################### parser
+
+import queue
+
+parser_done = queue.Queue()
 
 import ply.yacc as yacc
 
@@ -183,23 +241,58 @@ def p_REPL_none(p):
     ' REPL : '
 def p_REPL_recur(p):
     ' REPL : REPL ex '
-    print('ast:', p[2].dump(1))                  # parsed AST
+    ast = p[2]                                  # parsed AST
+    # print('ast:', ast.dump(1))
     try:
-        print('eval:', p[2].eval(env).dump(1))   # evaluated AST
+        result = p[2].eval(env)                 # evaluated AST
+        # print('eval:', result.dump(1))
     except Exception as err:
+        result = None
         traceback.print_exc()
-    print('env:', env.dump(1))                   # current env state
-    print('-' * 88)                              # ------------------
+    # print('env:', env.dump(1))                # current env state
+    # print('-' * 88)                           # ------------------
+    parser_done.put([ast, result])
+
+
+############################################ literals
 
 def p_ex_sym(p):
-    'ex : sym'
+    ' ex : sym '
     p[0] = p[1]
 def p_ex_num(p):
-    'ex : num'
+    ' ex : num '
     p[0] = p[1]
 def p_ex_str(p):
-    'ex : str'
+    ' ex : str '
     p[0] = p[1]
+
+############################################ operators
+
+def p_ex_quote(p):
+    ' ex : tick ex '
+    p[0] = Op(p[1]) // p[2]
+
+def p_ex_nameit(p):
+    ' ex : sym tild ex '
+    p[0] = p[3]
+    p[3].value = p[1].value
+
+############################################### parens
+
+def p_ex_list(p):
+    ' ex : lq seq rq '
+    p[0] = p[2]
+
+def p_seq_none(p):
+    ' seq : '
+    p[0] = List()
+def p_list_spaced(p):
+    ' seq : seq ex '
+    p[0] = p[1] // p[2]
+def p_list_comma(p):
+    ' seq : seq comma ex '
+    p[0] = p[1] // p[3]
+
 
 def p_error(p): raise SyntaxError(p)
 
