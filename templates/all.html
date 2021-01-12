@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru">
     <head>
-        <title>{{title}}</title>
+        <title>{{g.argv}}</title>
         <!-- \ <section:bootstrap/head> -->
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -22,25 +22,23 @@
     <body>
         <DIV class="container-fluid">
             <!-- \ <section:navbar> -->
-            <nav class="navbar-header">
-                <A class="navbar-logo" href="/admin/">
-                    <IMG src="/static/logo.png" style="height:48px;">
-                    
-                </A>
-                <UL class="navbar-nav">
-                    <LI class="nav-item">
-                        <A class="nav-link" href="/admin/">
-                            admin
-                        </A>
-                    </LI>
-                    <LI class="nav-item">
-                        <A class="nav-link" href="/about/">
-                            about
-                        </A>
-                    </LI>
-                    
-                </UL>
-            </nav> -->
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="#">{{g.argv}}</a>
+                    <A class="navbar-logo" href="/about/">
+                        <IMG src="/static/logo.png" style="height:48px;" alt="{{argv}}">
+                    </A>
+                    <UL class="navbar-nav">
+                        <LI class="nav-item">
+                            <A class="nav-link" href="/admin/">
+                                admin
+                            </A>
+                        </LI>
+                    </UL>
+                </div>
+            </div>
+        </nav>
             <!-- / <section:navbar> -->
 
             <DIV class="row">

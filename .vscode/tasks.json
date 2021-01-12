@@ -14,6 +14,12 @@
             "command":        "make update",
             "problemMatcher": []
         },
+        {
+            "label":          "make: web",
+            "type":           "shell",
+            "command":        "make web",
+            "problemMatcher": []
+        },
         /* / <section:tasks> */
     ]
 }

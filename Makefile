@@ -21,12 +21,15 @@ PEP          = $(BIN)/autopep8
 PYT          = $(BIN)/pytest
 # / <section:tool>
 # \ <section:obj>
-P   += $(MODULE).py config.py
+P   += $(MODULE).py test_$(MODULE).py
 # / <section:obj>
 S   += $(P) $(C) $(H) $(R) $(E) $(X) $(L)
 # \ <section:all>
 .PHONY: all
 all: $(PY) $(MODULE).py	
+	$^ $@
+.PHONY: web
+web: $(PY) $(MODULE).py	
 	$^ $@
 .PHONY: test
 test: $(PYT) test_$(MODULE).py
@@ -34,7 +37,7 @@ test: $(PYT) test_$(MODULE).py
 .PHONY: repl
 repl: $(PY) $(MODULE).py
 	clear
-	$(PY) -i $(MODULE).py
+	$(PY) -i $(MODULE).py $@
 	$(MAKE) $@
 .PHONY: pep
 pep: $(PEP)
@@ -118,7 +121,8 @@ static/leaflet.js: $(TMP)/leaflet.zip
 # / <section:js>
 # / <section:install>
 # \ <section:merge>
-MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S) requirements.pip
+MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S)
+MERGE += $(MODULE).py test_$(MODULE).py requirements.pip
 MERGE += static templates
 .PHONY: main
 main:
