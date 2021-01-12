@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <title>{{title}}</title>
+        <!-- \ <section:bootstrap/head> -->
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/bootstrap.css" rel="stylesheet">
+        <!-- / <section:bootstrap/head> -->
+        <!--[if lt IE 9]>
+            <script src="/static/html5shiv.js"></script>
+            <script src="/static/respond.js"></script>
+        <![endif]-->
+        <link rel="shortcut icon" href="/static/logo.png" type="image/png">
+        <link href="/static/css.css" rel="stylesheet">
+        {% block head %}{% endblock %}
+    </head>
+    <style>
+        {% block style %}{% endblock %}
+    </style>
+    <body>
+        <DIV class="container-fluid">
+            <!-- \ <section:navbar> -->
+            <nav class="navbar-header">
+                <A class="navbar-logo" href="/admin/">
+                    <IMG src="/static/logo.png" style="height:48px;">
+                    
+                </A>
+                <UL class="navbar-nav">
+                    <LI class="nav-item">
+                        <A class="nav-link" href="/admin/">
+                            admin
+                        </A>
+                    </LI>
+                    <LI class="nav-item">
+                        <A class="nav-link" href="/about/">
+                            about
+                        </A>
+                    </LI>
+                    
+                </UL>
+            </nav>
+            <!-- / <section:navbar> -->
+            <DIV class="row">
+                {% block body %}{% endblock %}
+            </DIV>
+        </DIV>
+    </body>
+    <script src="/static/jquery.js"></script>
+    <script src="/static/bootstrap.js"></script>
+    {% block script %}{% endblock %}
+</html>
