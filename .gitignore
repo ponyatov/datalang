@@ -1,0 +1,17 @@
+# \ <section:top>
+*~
+*.swp
+*.log
+# / <section:top>
+# \ <section:mid>
+*.pyc
+/bin
+/lib
+/lib64
+/share
+/__pycache__
+/pyvenv.cfg
+# / <section:mid>
+# \ <section:bot>
+!.gitignore
+# / <section:bot>
