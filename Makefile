@@ -27,6 +27,9 @@ S   += $(P) $(C) $(H) $(R) $(E) $(X) $(L)
 # \ <section:all>
 .PHONY: all
 all: $(PY) $(MODULE).py	
+	$^ $@
+.PHONY: test
+test: $(PYT) test_$(MODULE).py
 	$^
 .PHONY: repl
 repl: $(PY) $(MODULE).py
@@ -56,6 +59,8 @@ install: $(OS)_install
 	$(MAKE) $(PIP)
 	$(MAKE) update
 	$(MAKE) js
+	$(MAKE) $(PY) $(MODULE).py
+	$(PY) $(MODULE).py $@
 	# / <section:body>
 .PHONY: update
 update: $(OS)_update
@@ -113,7 +118,7 @@ static/leaflet.js: $(TMP)/leaflet.zip
 # / <section:js>
 # / <section:install>
 # \ <section:merge>
-MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S)
+MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S) requirements.pip
 MERGE += static templates
 .PHONY: main
 main:

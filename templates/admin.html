@@ -1,1 +1,21 @@
 {% extends 'all.html' %}
+{% block body %}
+<table class="row-6" id="users">
+    <tr>
+        <td>login</td>
+        <td>email</td>
+        <td>first</td>
+        <td>second</td>
+        <td>last</td>
+    </tr>
+{% for u in User.query.all() %}
+    <tr>
+        <td>{{u.login}}</td>
+        <td>{{u.email}}</td>
+        <td>{{u.first_name}}</td>
+        <td>{{u.second_name if u.second_name else ''}}</td>
+        <td>{{u.last_name}}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endblock %}

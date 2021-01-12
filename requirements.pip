@@ -1,2 +1,4 @@
 ply
-flask
+Flask
+Flask-Markdown
+Flask-SQLAlchemy

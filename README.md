@@ -15,3 +15,7 @@ github: https://github.com/ponyatov/datalang
     * interactive session via web interface
         * console -> Jupyter-like cell editor -> full-size web layouting
 
+### Flask/SQLite
+
+* [Изучение Flask / #3 - Работа с базой данных SQLite](https://www.youtube.com/watch?v=G-si1WbtNeM)
+* https://flask-sqlalchemy.palletsprojects.com/en/2.x/quickstart/
