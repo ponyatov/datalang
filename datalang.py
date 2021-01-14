@@ -1,73 +1,7 @@
 import config
 
-import os, sys
+import os, sys, re
 import traceback
-
-import flask
-
-app = flask.Flask(__name__)
-
-with app.app_context():
-    flask.g.argv = sys.argv
-
-from flaskext.markdown import Markdown
-Markdown(app)
-
-
-##################################################################### database
-
-from flask_sqlalchemy import SQLAlchemy
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{sys.argv[0]}.db'
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    #
-    login = db.Column(db.String(0x11), unique=True, nullable=False)
-    #
-    email = db.Column(db.String(0x22), nullable=False)
-    phone = db.Column(db.String(0x22))
-    skype = db.Column(db.String(0x22))
-    telegram = db.Column(db.String(0x22))
-    #
-    first_name = db.Column(db.String(0x11), nullable=False)
-    second_name = db.Column(db.String(0x11))
-    last_name = db.Column(db.String(0x11), nullable=False)
-    #
-    admin = db.Column(db.Boolean())
-
-def db_install():
-    db.create_all()
-    db.session.add(User(login='dponyatov',
-                        email='dponyatov@gmail.com', telegram='dponyatov',
-                        first_name='Dmitry', last_name='Ponyatov',
-                        admin=True))
-    db.session.commit()
-
-
-###################################################################### routing
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    assert request.method == 'GET'
-    return flask.render_template('index.html', argv=sys.argv)
-
-@app.route('/admin/')
-def admin():
-    # return flask.redirect('/')
-    return flask.render_template('admin.html', argv=sys.argv, User=User)
-
-@app.route('/about/')
-def about():
-    with open('README.md') as md:
-        README = md.read()
-    return flask.render_template('about.html', argv=sys.argv, readme=README)
-
-@app.route('/static/<path:path>')
-def statics(path):
-    print(path)
-    return app.send_static_file(path)
 
 ################################################################## object core
 
@@ -84,13 +18,17 @@ class Object:
 
     def __repr__(self): return self.dump()
 
-    def dump(self, depth=0, prefix='', test=False):
+    def dump(self, cycle=[], depth=0, prefix='', test=False):
         ret = self.pad(depth) + self.head(prefix, test)
+        # block cycles
+        if not depth: cycle=[]
+        if self in cycle: return ret + ' _/'
+        else: cycle.append(self)
         # slot{}
         for i in sorted(self.slot.keys()):
-            ret += self.slot[i].dump(depth + 1, f'{i} = ', test)
+            ret += self.slot[i].dump(cycle, depth + 1, f'{i} = ', test)
         for j, k in enumerate(self.nest):
-            ret += k.dump(depth + 1, f'{j} : ', test)
+            ret += k.dump(cycle, depth + 1, f'{j} : ', test)
         return ret
 
     def head(self, prefix='', test=False):
@@ -102,18 +40,44 @@ class Object:
 
     ############################################### operators
 
+    def keys(self):
+        return sorted(self.slot.keys())
+
     def __getitem__(self, key):             ## A[key] get by symbol
         assert isinstance(key, str)
         return self.slot[key]
+
+    def __setitem__(self,key,that):         ## A[key] = B
+        assert isinstance(key,str)
+        if isinstance(that,str):
+            that = Str(that)
+        if isinstance(that,int):
+            that = Int(that)
+        assert isinstance(that,Object)
+        self.slot[key] = that ; return self
+
+    def __lshift__(self,that):              ## A[B.type] = B
+        assert isinstance(that,Object)
+        return self.__setitem__(that.type,that)
+
+    def __rshift__(self,that):              ## A[B.value] = B
+        assert isinstance(that,Object)
+        return self.__setitem__(that.value,that)
 
     def __floordiv__(self, that):           ## A // B push
         assert isinstance(that, Object)
         self.nest.append(that)
         return self
 
+    ############################################## conversion
+
+    def html(self,depth=0):
+        raise NotImplementedError(self, 'html', self.__class__)
+
     ############################################## evaluation
 
-    def eval(self, env): raise NotImplementedError(self, eval, self.__class__)
+    def eval(self, env):
+        raise NotImplementedError(self, 'eval', self.__class__)
 
 
 ###################################################### primitive scalar types
@@ -125,12 +89,15 @@ class Sym(Primitive):
     def eval(self, env): return env[self.value]
 
 class Str(Primitive):
-    pass
+    def html(self,depth=0): return f'{self.value}'
 
 class Num(Primitive):
     def __init__(self, V):
         super().__init__(float(V))
 
+class Int(Num):
+    def __init__(self,V):
+        Primitive.__init__(self,int(V))
 
 ############################################################# data containers
 
@@ -146,7 +113,7 @@ class Env(Map):
     pass
 
 
-env = Env('global')
+env = Env('global') ; env['env'] = env
 
 class List(Container):
     pass
@@ -179,6 +146,64 @@ class Cmd(Active):      # VM command (Python function)
 
 class Fn(Active):       # function
     pass
+
+######################################################################## meta
+
+class Meta(Object): pass
+
+class S(Meta):                              ## generic source code
+    def __init__(self,start=None,end=None):
+        super().__init__('')
+        self.start = start
+        self.end = end
+    def html(self,depth=0):
+        ret = ''
+        if self.start:
+            ret += f'{" "*depth}{self.start}\n'
+        for j in self.nest:
+            ret += j.html(depth+1)+'\n'
+        if self.end:
+            ret += f'{" "*depth}{self.end}\n'
+        return ret
+
+######################################################################### I/O
+
+class IO(Object): pass
+
+class Dir(IO): pass
+class File(IO): pass
+
+class Net(IO): pass
+
+class IP(Net):
+    def __init__(self,V):
+        IP.validate(V)
+        super().__init__(V)
+
+    lex = r'(\d{1,3}\.){3}\d{1,3}'
+
+    @staticmethod
+    def validate(V):
+        assert re.match(IP.lex,V)
+        for i in map(int,V.split('.')): assert i <= 255
+
+class Port(Net,Int):
+    @staticmethod
+    def validate(V):
+        assert isinstance(V,int)
+        assert V >= 0 and V < 0x10000
+    def __init__(self,V):
+        Port.validate(V)
+        Int.__init__(self,V)
+
+class EMail(Net):
+    def html(self,depth=0):
+        return f'<a href="mailto:{self.value}">{self.value}</a>'
+
+class Url(Net):
+    def html(self,depth=0):
+        return f'<a href="{self.value}">{self.value}</a>'
+
 
 ####################################################################### lexer
 
@@ -299,8 +324,212 @@ def p_error(p): raise SyntaxError(p)
 
 parser = yacc.yacc(debug=False, write_tables=False)
 
+##################################################################### metainfo
+
+metainfo = Map('metainfo') ; env >> metainfo
+
+class Author(Meta): pass
+class GitHub(Meta): pass
+
+metainfo << (Author('Dmitry Ponyatov') << EMail('dponyatov@gmail.com'))
+metainfo << GitHub('https://github.com/ponyatov/datalang')
+
+######################################################################## bully
+
+class Module(Meta): pass
+
+class HTML(Object):
+    def __init__(self,V=None,**kw):
+        super().__init__(V)
+        for i in kw:
+            j = i.replace('_','-')
+            j = j.replace('clazz','class')
+            self[j] = kw[i]
+    def html(self,depth=0):
+        ret = f'{" "*depth}<{self.type}'
+        for i in self.keys():
+            ret += f' {i}="{self[i].html()}"'
+        ret += '>'
+        if self.value != None:
+            ret += f'{self.value}'
+        for j in self.nest:
+            ret += j.html(depth+1)
+        if self.nest:
+            ret += f'{" "*depth}'
+        ret += f'</{self.type}>'
+        return ret
+
+class HEAD(HTML): pass
+class TITLE(HTML): pass
+class META(HTML): pass
+class LINK(HTML): pass
+class SCRIPT(HTML): pass
+
+class BODY(HTML): pass
+class DIV(HTML): pass
+class NAV(HTML): pass
+
+class A(HTML): pass
+class IMG(HTML): pass
+class PRE(HTML): pass
+
+class App(Module):
+    def __init__(self,V,logo="/static/logo.png"):
+        super().__init__(V)
+        self['logo'] = File(logo)
+        # self['head'] = self.html_head()
+
+    def html_head(self):
+        return HEAD() //\
+            TITLE(f'{self.head(test=True)[1:-1]}') //\
+            META(charset="utf-8") //\
+            META(http_equiv="X-UA-Compatible",content="IE=edge") //\
+            META(name="viewport",content="width=device-width, initial-scale=1") //\
+            LINK(href="/static/bootstrap.css",rel="stylesheet") //\
+            (S('<!--[if lt IE 9]>','<![endif]-->') //\
+                SCRIPT(src="/static/html5shiv.js") //\
+                SCRIPT(src="/static/respond.js")) //\
+            LINK(rel="shortcut icon",href=self['logo'].value,type="image/png") //\
+            LINK(href="/static/css.css",rel="stylesheet")
+
+    def html(self,depth=0):
+        ret = '<!doctype html>'
+        #
+        head = self.html_head() # self['head']
+        #
+        body = BODY() //\
+            (DIV(clazz="container-fluid") //\
+                (NAV(clazz="navbar navbar-default") //\
+                    (A(href=f'/dump/app/{self.value}',clazz="navbar-logo") //\
+                    IMG(src=self['logo'].value,style="height:48px;",alt=re.sub(r'[<>]','',self.head())))
+                )
+            )
+        #
+        script = HTML() //\
+            SCRIPT(src="/static/jquery.js") //\
+            SCRIPT(src="/static/bootstrap.js")
+        #
+        ret += (HTML(lang='ru') // head // body // script).html()
+        return ret
+
+env >> (Map('app') >> App('bully',logo='/static/weather.png'))
+
+
+################################################################ web interface
+
+class Web(Object): pass
+
+
+web = Map('web') ; env >> web
+web['host'] = IP(config.HOST)
+web['port'] = Port(config.PORT)
+
+import flask
+
+web['engine'] = Module('flask')
+
+app = flask.Flask(__name__)
+
+with app.app_context():
+    flask.g.argv = sys.argv
+
+from flaskext.markdown import Markdown
+Markdown(app)
+
+##################################################################### database
+
+class DB(Object): pass
+
+db = DB(f'sqlite:///{sys.argv[0]}.db')
+
+env['web'] << db
+
+from flask_sqlalchemy import SQLAlchemy
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = db.value
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    #
+    login = db.Column(db.String(0x11), unique=True, nullable=False)
+    #
+    email = db.Column(db.String(0x22), nullable=False)
+    phone = db.Column(db.String(0x22))
+    skype = db.Column(db.String(0x22))
+    telegram = db.Column(db.String(0x22))
+    #
+    first_name = db.Column(db.String(0x11), nullable=False)
+    second_name = db.Column(db.String(0x11))
+    last_name = db.Column(db.String(0x11), nullable=False)
+    #
+    admin = db.Column(db.Boolean())
+
+def db_install():
+    db.create_all()
+    db.session.add(User(login='dponyatov',
+                        email='dponyatov@gmail.com', telegram='dponyatov',
+                        first_name='Dmitry', last_name='Ponyatov',
+                        admin=True))
+    db.session.commit()
+
+
+###################################################################### routing
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    # assert request.method == 'GET'
+    return flask.render_template('index.html', argv=sys.argv)
+
+@app.route('/admin/')
+def admin():
+    # return flask.redirect('/')
+    return flask.render_template('admin.html', argv=sys.argv, User=User)
+
+@app.route('/about/')
+def about():
+    with open('README.md') as md:
+        README = md.read()
+    return flask.render_template('about.html', argv=sys.argv, readme=README)
+
+@app.route('/static/<path:path>')
+def statics(path):
+    print(path)
+    return app.send_static_file(path)
+
+@app.route('/dump/<path:path>')
+def dump(path):
+    item = env
+    for i in re.findall(r'[a-z]+',path):
+        item = item[i]
+    return flask.render_template('dump.html',data=item.dump())
+
+@app.route('/<path:path>')
+def any(path):
+    item = env
+    for i in re.findall(r'[a-z]+',path):
+        item = item[i]
+    return item.html()
+
 
 ########################################################## system command line
+
+def bar(): print('-' * 88)
+
+def REPL():
+    print(env['metainfo'])
+    bar()
+    while True:
+        while parser_done.empty():
+            try: parser.parse(input('data> '))
+            except SyntaxError: traceback.print_exc()
+        ast,result = parser_done.get(timeout=1)
+        #
+        print('ast:', ast.dump(1))          # parsed AST
+        if result:
+            print('eval:', result.dump(1))  # evaluated AST
+        print('env:', env.dump(1))          # current env state
+        bar()                               # ------------------
 
 if __name__ == '__main__':
     if sys.argv[1] == 'all':
@@ -312,7 +541,6 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'install':
         db_install()
     elif sys.argv[1] == 'repl':
-        while True:
-            parser.parse(input('data> '))
+        REPL()
     else:
         raise SyntaxError(sys.argv)

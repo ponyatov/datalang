@@ -16,3 +16,4 @@
 !.gitignore
 # / <section:bot>
 /*.db
+/.lsp/

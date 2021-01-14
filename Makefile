@@ -101,10 +101,10 @@ static/bootstrap.css:
 static/bootstrap.js:
 	$(WGET) -O $@ https://maxcdn.bootstrapcdn.com/bootstrap/$(BOOTSTRAP_VER)/js/bootstrap.js
 
-HTML2SHIV_VER = 3.7.3
-HTML2SHIV_URL = https://cdnjs.cloudflare.com/ajax/libs/html5shiv/$(HTML2SHIV_VER)/html5shiv-printshiv.js
+HTML5SHIV_VER = 3.7.3
+HTML5SHIV_URL = https://cdnjs.cloudflare.com/ajax/libs/html5shiv/$(HTML5SHIV_VER)/html5shiv-printshiv.js
 static/html5shiv.js:
-	$(WGET) -O $@ $(HTML2SHIV_URL)
+	$(WGET) -O $@ $(HTML5SHIV_URL)
 
 RESPOND_VER = 1.4.2
 RESPOND_URL = https://cdnjs.cloudflare.com/ajax/libs/respond.js/$(RESPOND_VER)/respond.js
