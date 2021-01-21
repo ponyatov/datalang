@@ -4,6 +4,7 @@
 jquery.js
 bootstrap.*
 leaflet.*
+mapbox.*
 images/layers*.png
 images/marker-*.png
 html5shiv.js

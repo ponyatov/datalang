@@ -13,7 +13,7 @@
         "sequence": [
             "workbench.action.files.saveAll",
             {"command": "workbench.action.terminal.sendSequence","args": {"text":
-                "\u000Dclear ; make web\u000D"
+                "\u000D clear ; make web \u000D"
             }}]
     },
     {
@@ -21,7 +21,7 @@
         "sequence": [
             "workbench.action.files.saveAll",
             {"command": "workbench.action.terminal.sendSequence","args": {"text":
-                "\u000Dexit()\u000D"
+                "\u000D clear ; make pep \u000D"
             }}]
     },
 ],
@@ -31,6 +31,7 @@
         "**/__pycache__/**": true,
         "**/bin/**": true, "**/include/**": true, "**/lib*/**": true,
         "**/share/**": true, "**/*.pyc": true, "**/pyvenv.cfg": true,
+        "**/.lsp": true, "**/.pytest_cache": true,
     /* / <section:watcher> */
 },
 "files.exclude": {
@@ -38,6 +39,7 @@
         "**/__pycache__/**": true,
         "**/bin/**": true, "**/include/**": true, "**/lib*/**": true,
         "**/share/**": true, "**/*.pyc": true, "**/pyvenv.cfg": true,
+        "**/.lsp": true, "**/.pytest_cache": true,
     /* / <section:exclude> */
 },
 "files.associations": {

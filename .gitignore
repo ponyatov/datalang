@@ -2,6 +2,8 @@
 *~
 *.swp
 *.log
+/*.db
+/.lsp/
 # / <section:top>
 # \ <section:mid>
 *.pyc
@@ -15,5 +17,8 @@
 # \ <section:bot>
 !.gitignore
 # / <section:bot>
-/*.db
-/.lsp/
+# \ <section:erlang>
+/rebar.lock
+/_build/
+*.beam
+# / <section:erlang>

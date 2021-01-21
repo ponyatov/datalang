@@ -2,5 +2,7 @@
     "recommendations": [
         "stkb.rewrap",
         // "tabnine.tabnine-vscode",
+        "erlang-ls.erlang-ls",
+        "valentin.beamdasm",
     ]
 }

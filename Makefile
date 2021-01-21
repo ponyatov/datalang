@@ -19,9 +19,20 @@ PY           = $(BIN)/python3
 PIP          = $(BIN)/pip3
 PEP          = $(BIN)/autopep8
 PYT          = $(BIN)/pytest
+REBAR        = $(BIN)/rebar3
+ERLC         = erlc
+ERL          = erl
 # / <section:tool>
 # \ <section:obj>
 P   += $(MODULE).py test_$(MODULE).py
+P   += core/__init__.py    core/object.py
+P   += core/primitive.py   core/string.py     core/number.py
+P   += core/container.py   core/namespace.py
+P   += core/active.py      core/meta.py       core/source.py
+P   += core/io.py          core/net.py
+P   += core/web.py         core/html.py       core/app.py
+P   += core/parser.py      core/metainfo.py
+P   += app/generic.py
 # / <section:obj>
 S   += $(P) $(C) $(H) $(R) $(E) $(X) $(L)
 # \ <section:all>
@@ -43,11 +54,28 @@ repl: $(PY) $(MODULE).py
 pep: $(PEP)
 $(PEP): $(P)
 	$(PEP) --ignore=E26,E302,E401,E402 --in-place $? && touch $@
+
+.PHONY: erl
+erl: $(REBAR) tmp/hello.beam
+	$< shell
+	# erl -pa tmp
+
+tmp/%.beam: src/%.erl
+	erlc -o tmp $<
 # / <section:all>
 # \ <section:doc>
 .PHONY: doc
-doc:  
+doc: \
+	doc/beam-book-2017-04-08.pdf \
+	doc/programming-erlang-2nd-edition.pdf \
+	doc/wxerlang-getting-started.pdf
 
+doc/beam-book-2017-04-08.pdf:
+	$(WGET) -O $@ https://exote.ch/~aseigo/beam-book/beam-book-2017-04-08.pdf
+doc/programming-erlang-2nd-edition.pdf:
+	$(WGET) -O $@ https://gangrel.files.wordpress.com/2015/08/programming-erlang-2nd-edition.pdf
+doc/wxerlang-getting-started.pdf:
+	$(WGET) -O $@ https://arifishaq.files.wordpress.com/2017/12/wxerlang-getting-started.pdf
 # / <section:doc>
 # \ <section:gz>
 .PHONY: gz
@@ -59,6 +87,7 @@ install: $(OS)_install
 	$(MAKE) gz
 	$(MAKE) doc
 	# \ <section:body>
+	$(MAKE) $(REBAR)
 	$(MAKE) $(PIP)
 	$(MAKE) update
 	$(MAKE) js
@@ -71,8 +100,8 @@ update: $(OS)_update
 	$(PIP)  install -U pip autopep8
 	$(PIP)  install -U -r requirements.pip
 	# / <section:update>
-.PHONY: $(OS)_install $(OS)_update
-$(OS)_install $(OS)_update:
+.PHONY: Linux_install Linux_update
+Linux_install Linux_update:
 	sudo apt update
 	sudo apt install -u `cat apt.txt`
 # \ <section:pyinst>
@@ -88,7 +117,8 @@ js: \
 	static/jquery.js \
 	static/bootstrap.css static/bootstrap.js \
 	static/html5shiv.js static/respond.js \
-	static/leaflet.css static/leaflet.js
+	static/leaflet.css static/leaflet.js \
+	static/mapbox.css static/mapbox.js
 
 JQUERY_VER = 3.5.1
 JQUERY_JS  = https://code.jquery.com/jquery-$(JQUERY_VER).js
@@ -118,7 +148,17 @@ $(TMP)/leaflet.zip:
 static/leaflet.css: static/leaflet.js
 static/leaflet.js: $(TMP)/leaflet.zip
 	unzip -d static $< leaflet.css leaflet.js* images/* && touch $@
+
+MAPBOX_VER = 3.3.1
+static/mapbox.css:
+	$(WGET) -O $@ https://api.mapbox.com/mapbox.js/v$(MAPBOX_VER)/mapbox.css
+static/mapbox.js:
+	$(WGET) -O $@ https://api.mapbox.com/mapbox.js/v$(MAPBOX_VER)/mapbox.js
 # / <section:js>
+# \ <section:erlang>
+$(REBAR):
+	$(WGET) -O $@ https://s3.amazonaws.com/rebar3/rebar3 && chmod +x $@
+# / <section:erlang>
 # / <section:install>
 # \ <section:merge>
 MERGE  = Makefile README.md apt.txt .gitignore .vscode $(S)
@@ -126,7 +166,7 @@ MERGE += $(MODULE).py test_$(MODULE).py requirements.pip
 MERGE += static templates
 .PHONY: main
 main:
-	# git push -v
+	git push -v
 	git checkout $@
 	git pull -v
 	git checkout shadow -- $(MERGE)

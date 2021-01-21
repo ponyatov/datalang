@@ -1,3 +1,4 @@
 git make wget curl
 python3 python3-venv
 sqlite3 sqlitebrowser
+erlang erlang-wx
